@@ -176,8 +176,8 @@ defmodule Sip.Tree.TreeSet do
   @type iterator(item) :: (() -> iterator_result(item))
   @type iterator_result(item) :: :done | {item, iterator(item)}
 
-  @spec preorder(t(item)) :: iterator(item) when item: var
-  def preorder(%TreeSet{root: root}), do: fn -> preorder_next({root, []}) end
+  # @spec preorder(t(item)) :: iterator(item) when item: var
+  # def preorder(%TreeSet{root: root}), do: fn -> preorder_next({root, []}) end
 
   def preorder_next({@empty, []}), do: :done
 
