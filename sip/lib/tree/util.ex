@@ -1,3 +1,0 @@
-defmodule Util do
-
-end

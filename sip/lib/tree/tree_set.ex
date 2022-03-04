@@ -1,4 +1,13 @@
 defmodule Sip.Tree.TreeSet do
+  @moduledoc """
+  TreeSet is a Set implemented using balanced binary trees - path length trees specifically.
+  It implements the following protocols: Enumerable, Collectable and String.Chars.
+  Conssequently you have access to every function in the Enum module.
+
+  TODO implement range functions thhat leverage the ordered tree structure
+  e.g. range(treeset, from, to) - iterate over elements of treeset from <= element <= to
+  within?
+  """
   alias Sip.Tree.TreeSet
 
   @empty nil
@@ -6,22 +15,21 @@ defmodule Sip.Tree.TreeSet do
   defstruct size: 0, root: @empty
 
   @type path_length :: non_neg_integer()
-  @type tree(item) :: { tree(item), item, path_length(), tree(item) } | nil
+  @type tree(item) :: {tree(item), item, path_length(), tree(item)} | nil
   @type t(item) :: %__MODULE__{size: non_neg_integer(), root: tree(item)}
 
   @spec wrap(tree(item)) :: t(item) when item: var
-  def wrap(branch), do: %TreeSet{ size: size(branch), root: branch }
+  def wrap(branch), do: %TreeSet{size: size(branch), root: branch}
 
   @spec new :: t(term)
   def new, do: wrap(@empty)
-
 
   def new(enumerable), do: build(enumerable)
 
   def new(enumerable, transform), do: build(Enum.map(enumerable, transform))
 
   def branch(left, item, right), do: {left, item, 1 + size(left) + size(right), right}
-  def leaf(item), do: branch(nil, item, nil)
+  def leaf(item), do: branch(@empty, item, @empty)
 
   @doc """
   Inserts item into a TreeSet
@@ -36,15 +44,17 @@ defmodule Sip.Tree.TreeSet do
       iex> Enum.reduce(1..7, TreeSet.new, &TreeSet.put(&2, &1)) |> to_string
       "#TreeSet<(((1)2(3))4((5)6(7)))>"
   """
-  def put(%TreeSet{root: root}, item) do
-    new_root = put_rec(item, root)
-    %TreeSet{ size: size(new_root), root: new_root}
-  end
+  def put(%TreeSet{root: root}, item), do: item |> put_rec(root) |> wrap
 
   @spec put_rec(item, tree(item)) :: item when item: var
-  defp put_rec(item, nil), do: branch(nil, item, nil)
-  defp put_rec(item, {a, b, _w, c}) when item < b, do: branch(put_rec(item, a), b, c) |> check_right_rotate
-  defp put_rec(item, {a, b, _w, c}) when item > b, do: branch(a, b, put_rec(item, c)) |> check_left_rotate
+  defp put_rec(item, @empty), do: leaf(item)
+
+  defp put_rec(item, {a, b, _w, c}) when item < b,
+    do: branch(put_rec(item, a), b, c) |> check_right_rotate
+
+  defp put_rec(item, {a, b, _w, c}) when item > b,
+    do: branch(a, b, put_rec(item, c)) |> check_left_rotate
+
   defp put_rec(_, t), do: t
 
   @doc """
@@ -69,16 +79,20 @@ defmodule Sip.Tree.TreeSet do
   """
 
   @spec left_rotate(tree(item)) :: tree(item) when item: var
-  def left_rotate(t), do: branch(branch(left(t), item(t), left(right(t))), item(right(t)), right(right(t)))
+  def left_rotate(t),
+    do: branch(branch(left(t), item(t), left(right(t))), item(right(t)), right(right(t)))
 
   @spec right_rotate(tree(item)) :: tree(item) when item: var
-  def right_rotate(t), do: branch(left(left(t)), item(left(t)), branch(right(left(t)), item(t), right(t)))
+  def right_rotate(t),
+    do: branch(left(left(t)), item(left(t)), branch(right(left(t)), item(t), right(t)))
 
   @spec check_left_rotate(tree(item)) :: tree(item) when item: var
-  def check_left_rotate(t), do: if(size(right(right(t))) > size(left(t)), do: left_rotate(t), else: t)
+  def check_left_rotate(t),
+    do: if(size(right(right(t))) > size(left(t)), do: left_rotate(t), else: t)
 
   @spec check_right_rotate(tree(item)) :: tree(item) when item: var
-  def check_right_rotate(t), do: if(size(left(left(t))) > size(right(t)), do: right_rotate(t), else: t)
+  def check_right_rotate(t),
+    do: if(size(left(left(t))) > size(right(t)), do: right_rotate(t), else: t)
 
   @doc """
   Iterates over a TreeSet
@@ -159,30 +173,41 @@ defmodule Sip.Tree.TreeSet do
       iex> iter.()
       :done
   """
-  @type iterator(item) :: (-> iterator_result(item))
+  @type iterator(item) :: (() -> iterator_result(item))
   @type iterator_result(item) :: :done | {item, iterator(item)}
 
   @spec preorder(t(item)) :: iterator(item) when item: var
   def preorder(%TreeSet{root: root}), do: fn -> preorder_next({root, []}) end
 
-  def preorder_next({nil, []}), do: :done
-  def preorder_next({nil, [{item, right} | stack]}), do: {item, fn -> preorder_next({right, stack}) end}
-  def preorder_next({{left, item, _, right}, stack}), do: preorder_next({left, [{item, right} | stack]} )
+  def preorder_next({@empty, []}), do: :done
+
+  def preorder_next({@empty, [{item, right} | stack]}),
+    do: {item, fn -> preorder_next({right, stack}) end}
+
+  def preorder_next({{left, item, _, right}, stack}),
+    do: preorder_next({left, [{item, right} | stack]})
 
   @spec postorder(t(item)) :: iterator(item) when item: var
   def postorder(%TreeSet{root: root}), do: fn -> postorder_next({root, []}) end
 
-  def postorder_next({nil, []}), do: :done
-  def postorder_next({nil, [{left, item} | stack]}), do: {item, fn -> postorder_next({left, stack}) end}
-  def postorder_next({{left, item, _, right}, stack}), do: postorder_next({right, [{left, item} | stack]})
+  def postorder_next({@empty, []}), do: :done
+
+  def postorder_next({@empty, [{left, item} | stack]}),
+    do: {item, fn -> postorder_next({left, stack}) end}
+
+  def postorder_next({{left, item, _, right}, stack}),
+    do: postorder_next({right, [{left, item} | stack]})
 
   @spec depthfirst(t(item)) :: iterator(item) when item: var
   def depthfirst(%TreeSet{root: root}), do: fn -> depthfirst_next({[root], []}) end
 
   def depthfirst_next({[], []}), do: :done
   def depthfirst_next({[], back}), do: depthfirst_next({Enum.reverse(back), []})
-  def depthfirst_next({[{left, item, _, right} | front], back}), do: {item, fn -> depthfirst_next({front, back |> add_back(left) |> add_back(right)}) end}
-  def add_back(queue, nil), do: queue
+
+  def depthfirst_next({[{left, item, _, right} | front], back}),
+    do: {item, fn -> depthfirst_next({front, back |> add_back(left) |> add_back(right)}) end}
+
+  def add_back(queue, @empty), do: queue
   def add_back(queue, tree), do: [tree | queue]
 
   @doc """
@@ -212,11 +237,17 @@ defmodule Sip.Tree.TreeSet do
   def delete(%TreeSet{root: root}, item), do: item |> delete_rec(root) |> wrap()
 
   @spec delete_rec(item, tree(item)) :: tree(item) when item: var
-  defp delete_rec(_item, nil), do: nil
-  defp delete_rec(item, {a, b, _w, c}) when item < b, do: branch(delete_rec(item, a), b, c) |> check_left_rotate
-  defp delete_rec(item, {a, b, _w, c}) when item > b, do: branch(a, b, delete_rec(item, c)) |> check_right_rotate
-  defp delete_rec(_, {a, _, _, nil}), do: a
-  defp delete_rec(_, {nil, _, _, c}), do: c
+  defp delete_rec(_item, @empty), do: @empty
+
+  defp delete_rec(item, {a, b, _w, c}) when item < b,
+    do: branch(delete_rec(item, a), b, c) |> check_left_rotate
+
+  defp delete_rec(item, {a, b, _w, c}) when item > b,
+    do: branch(a, b, delete_rec(item, c)) |> check_right_rotate
+
+  defp delete_rec(_, {a, _, _, @empty}), do: a
+  defp delete_rec(_, {@empty, _, _, c}), do: c
+
   defp delete_rec(item, {left, item, _, right}) do
     if size(left) > size(right) do
       next = rightmost(left)
@@ -227,10 +258,10 @@ defmodule Sip.Tree.TreeSet do
     end
   end
 
-  def leftmost({nil, item, _, _}), do: item
+  def leftmost({@empty, item, _, _}), do: item
   def leftmost({left, _, _, _}), do: leftmost(left)
 
-  def rightmost({_, item, _, nil}), do: item
+  def rightmost({_, item, _, @empty}), do: item
   def rightmost({_, _, _, right}), do: rightmost(right)
 
   @doc """
@@ -249,9 +280,15 @@ defmodule Sip.Tree.TreeSet do
 
   def difference_rec(:done, _, items), do: build(items, true)
   def difference_rec(a, :done, items), do: finish(a, items)
-  def difference_rec({a_item, a_iter}, {b_item, _} = b, items) when a_item > b_item, do: difference_rec(a_iter.(), b, [a_item | items])
-  def difference_rec({a_item, _} = a, {b_item, b_iter}, items) when a_item < b_item, do: difference_rec(a, b_iter.(), items)
-  def difference_rec({_, a_iter}, {_, b_iter}, items), do: difference_rec(a_iter.(), b_iter.(), items)
+
+  def difference_rec({a_item, a_iter}, {b_item, _} = b, items) when a_item > b_item,
+    do: difference_rec(a_iter.(), b, [a_item | items])
+
+  def difference_rec({a_item, _} = a, {b_item, b_iter}, items) when a_item < b_item,
+    do: difference_rec(a, b_iter.(), items)
+
+  def difference_rec({_, a_iter}, {_, b_iter}, items),
+    do: difference_rec(a_iter.(), b_iter.(), items)
 
   @doc """
   Tests two sets have distinct members
@@ -268,8 +305,13 @@ defmodule Sip.Tree.TreeSet do
 
   def disjoint_rec(:done, _), do: true
   def disjoint_rec(_, :done), do: true
-  def disjoint_rec({a_item, a_iter}, {b_item, _} = b_state) when a_item < b_item, do: disjoint_rec(a_iter.(), b_state)
-  def disjoint_rec({a_item, _} = a_state, {b_item, b_iter}) when a_item > b_item, do: disjoint_rec(a_state, b_iter.())
+
+  def disjoint_rec({a_item, a_iter}, {b_item, _} = b_state) when a_item < b_item,
+    do: disjoint_rec(a_iter.(), b_state)
+
+  def disjoint_rec({a_item, _} = a_state, {b_item, b_iter}) when a_item > b_item,
+    do: disjoint_rec(a_state, b_iter.())
+
   def disjoint_rec(_, _), do: false
 
   @doc """
@@ -302,13 +344,20 @@ defmodule Sip.Tree.TreeSet do
       iex> TreeSet.intersection(TreeSet.new(1..7), TreeSet.new(1..8)) |> to_string
       "#TreeSet<(((1)2(3))4((5)6(7)))>"
   """
-  def intersection(tree1, tree2), do: intersection_rec(postorder(tree1).(), postorder(tree2).(), [])
+  def intersection(tree1, tree2),
+    do: intersection_rec(postorder(tree1).(), postorder(tree2).(), [])
 
   def intersection_rec(:done, _, items), do: build(items, true)
   def intersection_rec(_, :done, items), do: build(items, true)
-  def intersection_rec({a_item, a_iter}, {b_item, _} = b, items) when a_item > b_item, do: intersection_rec(a_iter.(), b, items)
-  def intersection_rec({a_item, _} = a, {b_item, b_iter}, items) when a_item < b_item, do: intersection_rec(a, b_iter.(), items)
-  def intersection_rec({item, a_iter}, {_, b_iter}, items), do: intersection_rec(a_iter.(), b_iter.(), [item | items])
+
+  def intersection_rec({a_item, a_iter}, {b_item, _} = b, items) when a_item > b_item,
+    do: intersection_rec(a_iter.(), b, items)
+
+  def intersection_rec({a_item, _} = a, {b_item, b_iter}, items) when a_item < b_item,
+    do: intersection_rec(a, b_iter.(), items)
+
+  def intersection_rec({item, a_iter}, {_, b_iter}, items),
+    do: intersection_rec(a_iter.(), b_iter.(), [item | items])
 
   @doc """
   Tests all the members of the first set is contained in the second set
@@ -326,7 +375,10 @@ defmodule Sip.Tree.TreeSet do
   def subset_rec(:done, _), do: true
   def subset_rec(_, :done), do: false
   def subset_rec({a_item, _}, {b_item, _}) when a_item < b_item, do: false
-  def subset_rec({a_item, _} = a, {b_item, b_iter}) when a_item > b_item, do: subset_rec(a, b_iter.())
+
+  def subset_rec({a_item, _} = a, {b_item, b_iter}) when a_item > b_item,
+    do: subset_rec(a, b_iter.())
+
   def subset_rec({_, a_iter}, {_, b_iter}), do: subset_rec(a_iter.(), b_iter.())
 
   @doc """
@@ -344,29 +396,35 @@ defmodule Sip.Tree.TreeSet do
 
   def union_rec(:done, b, items), do: finish(b, items)
   def union_rec(a, :done, items), do: finish(a, items)
-  def union_rec({a_item, a_iter}, {b_item, _} = b, items) when a_item > b_item, do: union_rec(a_iter.(), b, [a_item | items])
-  def union_rec({a_item, _} = a, {b_item, b_iter}, items) when a_item < b_item, do: union_rec(a, b_iter.(), [b_item | items])
-  def union_rec({item, a_iter}, {_, b_iter}, items), do: union_rec(a_iter.(), b_iter.(), [item | items])
+
+  def union_rec({a_item, a_iter}, {b_item, _} = b, items) when a_item > b_item,
+    do: union_rec(a_iter.(), b, [a_item | items])
+
+  def union_rec({a_item, _} = a, {b_item, b_iter}, items) when a_item < b_item,
+    do: union_rec(a, b_iter.(), [b_item | items])
+
+  def union_rec({item, a_iter}, {_, b_iter}, items),
+    do: union_rec(a_iter.(), b_iter.(), [item | items])
 
   def finish(:done, items), do: build(items, true)
   def finish({item, iter}, items), do: finish(iter.(), [item | items])
 
   def size(%TreeSet{size: size}), do: size
-  def size(nil), do: 0
+  def size(@empty), do: 0
   def size({_, _, size, _}), do: size
 
   def left({left, _item, _size, _right}), do: left
-  def left(nil), do: nil
+  def left(@empty), do: @empty
 
   def item({_left, item, _size, _right}), do: item
 
   def right({_left, _item, _size, right}), do: right
-  def right(nil), do: nil
+  def right(@empty), do: @empty
 
-  def empty?(nil), do: true
+  def empty?(@empty), do: true
   def empty?(_), do: false
 
-  def member?(nil, _), do: false
+  def member?(@empty, _), do: false
   def member?({left, item, _right}, target) when target < item, do: member?(left, target)
   def member?({_left, item, right}, target) when target > item, do: member?(right, target)
   def member?(_, _), do: true
@@ -392,9 +450,11 @@ defmodule Sip.Tree.TreeSet do
     |> build_rec(Enum.count(items))
     |> wrap
   end
-  def build_rec(_, 0), do: nil
+
+  def build_rec(_, 0), do: @empty
+
   def build_rec(items, n) do
-    left_n = div(n-1, 2)
+    left_n = div(n - 1, 2)
     right_n = n - 1 - left_n
     [item | right] = Enum.drop(items, left_n)
     {build_rec(items, left_n), item, n, build_rec(right, right_n)}
@@ -402,27 +462,41 @@ defmodule Sip.Tree.TreeSet do
 end
 
 defimpl Enumerable, for: Sip.Tree.TreeSet do
+  @empty nil
+
   alias Sip.Tree.TreeSet
 
   def count(%TreeSet{root: _, size: size}), do: {:ok, size}
 
   def member?(%TreeSet{root: root, size: _}, target), do: {:ok, TreeSet.member?(root, target)}
 
-  def reduce(%TreeSet{root: root}, state, fun) do
-    reduce_rec({root, []}, state, fun)
-  end
-  def reduce_rec(_list, {:halt, acc}, _fun), do: {:halted, acc}
-  def reduce_rec(list, {:suspend, acc}, fun), do: {:suspended, acc, &reduce_rec(list, &1, fun)}
-  def reduce_rec({nil, []}, {:cont, acc}, _fun), do: {:done, acc}
-  def reduce_rec({nil, [{ _, item, _size, right} | as]}, {:cont, acc}, fun), do: reduce_rec({right, as}, fun.(item, acc), fun)
-  def reduce_rec({{left, _, _, _} = node, as}, {:cont, acc}, fun), do: reduce_rec({left, [node | as]}, {:cont, acc}, fun)
+  def reduce(%TreeSet{root: root}, state, fun), do: reduce_rec({root, []}, state, fun)
+
+  def reduce_rec(_state, {:halt, acc}, _fun), do: {:halted, acc}
+  def reduce_rec(state, {:suspend, acc}, fun), do: {:suspended, acc, &reduce_rec(state, &1, fun)}
+  def reduce_rec({@empty, []}, {:cont, acc}, _fun), do: {:done, acc}
+
+  def reduce_rec({@empty, [{item, right} | as]}, {:cont, acc}, fun),
+    do: reduce_rec({right, as}, fun.(item, acc), fun)
+
+  def reduce_rec({{left, item, _, right}, as}, {:cont, acc}, fun),
+    do: reduce_rec({left, [{item, right} | as]}, {:cont, acc}, fun)
 
   def slicer({_, _, acc}, 0, 0), do: acc |> Enum.reverse()
-  def slicer({nil, [{item, right} | stack], acc}, 0, n), do: slicer({right, stack, [item | acc]}, 0, n-1)
-  def slicer({{left, item, _, right}, stack, acc}, 0, n), do: slicer({left, [{item, right} | stack], acc}, 0, n)
-  def slicer({nil, [{_item, right} | stack], acc}, m, n), do: slicer({right, stack, acc}, m-1, n)
-  def slicer({{left, item, size, right}, stack, acc}, m, n) when size > m, do: slicer({left, [{item, right} | stack], acc}, m, n)
-  def slicer({{_, _, size, _}, stack, acc}, m, n), do: slicer({nil, stack, acc}, m-size, n)
+
+  def slicer({@empty, [{item, right} | stack], acc}, 0, n),
+    do: slicer({right, stack, [item | acc]}, 0, n - 1)
+
+  def slicer({{left, item, _, right}, stack, acc}, 0, n),
+    do: slicer({left, [{item, right} | stack], acc}, 0, n)
+
+  def slicer({@empty, [{_item, right} | stack], acc}, m, n),
+    do: slicer({right, stack, acc}, m - 1, n)
+
+  def slicer({{left, item, size, right}, stack, acc}, m, n) when size > m,
+    do: slicer({left, [{item, right} | stack], acc}, m, n)
+
+  def slicer({{_, _, size, _}, stack, acc}, m, n), do: slicer({@empty, stack, acc}, m - size, n)
 
   def slice(%TreeSet{root: root, size: size}) do
     slicer = fn start, n -> slicer({root, [], []}, start, n) end
@@ -445,10 +519,15 @@ defimpl Collectable, for: Sip.Tree.TreeSet do
 end
 
 defimpl String.Chars, for: Sip.Tree.TreeSet do
+  @empty nil
+
   alias Sip.Tree.TreeSet
 
-  def to_string(%TreeSet{ root: root}), do: ["#TreeSet<", tree_to_iodata(root), ">"] |> IO.iodata_to_binary
+  def to_string(%TreeSet{root: root}),
+    do: ["#TreeSet<", tree_to_iodata(root), ">"] |> IO.iodata_to_binary()
 
-  defp tree_to_iodata(nil), do: []
-  defp tree_to_iodata({left, item, _, right}), do: ["(", tree_to_iodata(left), Kernel.to_string(item), tree_to_iodata(right), ")"]
+  defp tree_to_iodata(@empty), do: []
+
+  defp tree_to_iodata({left, item, _, right}),
+    do: ["(", tree_to_iodata(left), Kernel.to_string(item), tree_to_iodata(right), ")"]
 end
