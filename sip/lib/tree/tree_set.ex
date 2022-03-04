@@ -187,8 +187,8 @@ defmodule Sip.Tree.TreeSet do
   def preorder_next({{left, item, _, right}, stack}),
     do: preorder_next({left, [{item, right} | stack]})
 
-  @spec postorder(t(item)) :: iterator(item) when item: var
-  def postorder(%TreeSet{root: root}), do: fn -> postorder_next({root, []}) end
+  # @spec postorder(t(item)) :: iterator(item) when item: var
+  # def postorder(%TreeSet{root: root}), do: fn -> postorder_next({root, []}) end
 
   def postorder_next({@empty, []}), do: :done
 
