@@ -7,7 +7,8 @@ defmodule Sip.MixProject do
       version: "0.1.0",
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      test_coverage: [tool: ExCoveralls]
     ]
   end
 
@@ -21,6 +22,7 @@ defmodule Sip.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:excoveralls, "~> 0.14.2", only: [:ci, :test]},
       {:credo, "~> 1.6.0", only: [:ci, :dev, :test], runtime: false},
       {:dialyxir, "~> 1.1", only: [:ci, :dev, :test], runtime: false}
       # {:dep_from_hexpm, "~> 0.3.0"},
