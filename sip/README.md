@@ -35,8 +35,8 @@ Thus if the size of E > size of A then we improve the path length of the overall
 This leads to the following sample code:
 
 ```elixir
-  @type path_length :: non_neg_integer()
-  @type tree(item) :: {tree(item), item, path_length(), tree(item)} | nil
+  @type size :: non_neg_integer()
+  @type tree(item) :: {tree(item), item, size(), tree(item)} | nil
   
   def size(@empty), do: 0
   def size({_, _, size, _}), do: size
