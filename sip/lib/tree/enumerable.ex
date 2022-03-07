@@ -1,5 +1,5 @@
 defimpl Enumerable, for: Sip.Tree.TreeSet do
-  @doc """
+  @moduledoc """
   https://blog.brettbeatty.com/elixir/custom_data_structures/enumerable
   http://blog.plataformatec.com.br/2015/05/introducing-reducees/
   https://groups.google.com/g/elixir-lang-talk/c/zNMFKOA-I7c
