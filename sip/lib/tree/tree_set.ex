@@ -14,8 +14,8 @@ defmodule Sip.Tree.TreeSet do
 
   defstruct size: 0, root: @empty
 
-  @type path_length :: non_neg_integer()
-  @type tree(item) :: {tree(item), item, path_length(), tree(item)} | nil
+  @type size :: non_neg_integer()
+  @type tree(item) :: {tree(item), item, size(), tree(item)} | nil
   @type t(item) :: %__MODULE__{size: non_neg_integer(), root: tree(item)}
 
   @spec wrap(tree(item)) :: t(item) when item: var
