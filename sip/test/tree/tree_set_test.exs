@@ -3,4 +3,8 @@ defmodule Sip.Tree.TreeSetTest do
 
   alias Sip.Tree.TreeSet
   doctest TreeSet
+
+  doctest Enumerable.Sip.Tree.TreeSet
+
+  doctest Collectable.Sip.Tree.TreeSet
 end

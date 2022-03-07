@@ -550,7 +550,7 @@ defmodule Sip.Tree.TreeSet do
       "#TreeSet<(((1)2(3))4((5)6(7)))>"
   """
   def build(items, sorted \\ false) do
-    if(sorted, do: items, else: items |> Enum.uniq |> Enum.sort)
+    if(sorted, do: items, else: items |> Enum.uniq() |> Enum.sort())
     |> build_rec
     |> wrap
   end
@@ -564,15 +564,4 @@ defmodule Sip.Tree.TreeSet do
     [item | right] = Enum.drop(items, left_n)
     {build_rec(items, left_n), item, n, build_rec(right, right_n)}
   end
-
-  @doc """
-  Count items
-
-  ## Examples
-      iex> TreeSet.build([]) |> Enum.count
-      0
-
-      iex> TreeSet.build(1..10) |> Enum.count
-      10
-  """
 end

@@ -5,10 +5,18 @@ defmodule Sip.MixProject do
     [
       app: :sip,
       version: "0.1.0",
-      elixir: "~> 1.13",
+      elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      test_coverage: [tool: ExCoveralls]
+      test_coverage: [tool: ExCoveralls],
+      aliases: aliases(),
+      preferred_cli_env: [
+        test: :test,
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ]
     ]
   end
 
@@ -27,6 +35,13 @@ defmodule Sip.MixProject do
       {:dialyxir, "~> 1.1", only: [:ci, :dev, :test], runtime: false}
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
+    ]
+  end
+
+  defp aliases do
+    [
+      checks: ["credo", "format", "dialyzer", "hex.outdated"],
+      cover: "coveralls.html"
     ]
   end
 end
