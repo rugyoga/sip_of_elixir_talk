@@ -105,7 +105,7 @@ defmodule Sip.Tree.TreeSet do
     do: if(size(left(left(t))) > size(right(t)), do: right_rotate(t), else: t)
 
   @doc """
-  Iterates over a TreeSet
+  Pre-order iteration over a TreeSet
 
   ## Examples
       iex> iter = TreeSet.build(1..7, true) |> TreeSet.preorder
@@ -132,7 +132,26 @@ defmodule Sip.Tree.TreeSet do
       7
       iex> iter.()
       :done
+  """
 
+  @type iterator(item) :: (() -> iterator_result(item))
+  @type iterator_result(item) :: :done | {item, iterator(item)}
+
+  @spec preorder(t(item)) :: iterator(item) when item: var
+  def preorder(%TreeSet{root: root}), do: fn -> preorder_next({root, []}) end
+
+  def preorder_next({@empty, []}), do: :done
+
+  def preorder_next({@empty, [{item, right} | stack]}),
+    do: {item, fn -> preorder_next({right, stack}) end}
+
+  def preorder_next({{left, item, _, right}, stack}),
+    do: preorder_next({left, [{item, right} | stack]})
+
+  @doc """
+  Post order iteration over a TreeSet
+
+  ## Examples
       iex> iter = TreeSet.build(1..7, true) |> TreeSet.postorder
       ...> {item, iter} = iter.()
       ...> item
@@ -157,7 +176,22 @@ defmodule Sip.Tree.TreeSet do
       1
       iex> iter.()
       :done
+  """
+  @spec postorder(t(item)) :: iterator(item) when item: var
+  def postorder(%TreeSet{root: root}), do: fn -> postorder_next({root, []}) end
 
+  def postorder_next({@empty, []}), do: :done
+
+  def postorder_next({@empty, [{left, item} | stack]}),
+    do: {item, fn -> postorder_next({left, stack}) end}
+
+  def postorder_next({{left, item, _, right}, stack}),
+    do: postorder_next({right, [{left, item} | stack]})
+
+  @doc """
+  Depth first iteration over a TreeSet
+
+  ## Examples
       iex> iter = TreeSet.build(1..7, true) |> TreeSet.depthfirst
       ...> {item, iter} = iter.()
       ...> item
@@ -183,31 +217,6 @@ defmodule Sip.Tree.TreeSet do
       iex> iter.()
       :done
   """
-  @type iterator(item) :: (() -> iterator_result(item))
-  @type iterator_result(item) :: :done | {item, iterator(item)}
-
-  @spec preorder(t(item)) :: iterator(item) when item: var
-  def preorder(%TreeSet{root: root}), do: fn -> preorder_next({root, []}) end
-
-  def preorder_next({@empty, []}), do: :done
-
-  def preorder_next({@empty, [{item, right} | stack]}),
-    do: {item, fn -> preorder_next({right, stack}) end}
-
-  def preorder_next({{left, item, _, right}, stack}),
-    do: preorder_next({left, [{item, right} | stack]})
-
-  @spec postorder(t(item)) :: iterator(item) when item: var
-  def postorder(%TreeSet{root: root}), do: fn -> postorder_next({root, []}) end
-
-  def postorder_next({@empty, []}), do: :done
-
-  def postorder_next({@empty, [{left, item} | stack]}),
-    do: {item, fn -> postorder_next({left, stack}) end}
-
-  def postorder_next({{left, item, _, right}, stack}),
-    do: postorder_next({right, [{left, item} | stack]})
-
   @spec depthfirst(t(item)) :: iterator(item) when item: var
   def depthfirst(%TreeSet{root: root}), do: fn -> depthfirst_next({[root], []}) end
 
