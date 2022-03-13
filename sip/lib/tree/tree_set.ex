@@ -4,7 +4,7 @@ defmodule Sip.Tree.TreeSet do
   It implements the following protocols: Enumerable, Collectable and String.Chars.
   Conssequently you have access to every function in the Enum module.
 
-  TODO implement range functions thhat leverage the ordered tree structure
+  TODO implement range functions that leverage the ordered tree structure
   e.g. range(treeset, from, to) - iterate over elements of treeset from <= element <= to
   within?
   """
